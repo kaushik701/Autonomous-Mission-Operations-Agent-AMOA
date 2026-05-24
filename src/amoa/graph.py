@@ -1,6 +1,6 @@
 """W0 hello-world LangGraph. Validates the stack end-to-end."""
 import asyncio
-from anthropic import AsyncAnthropic
+from groq import AsyncGroq
 from langgraph.graph import StateGraph, START, END
 
 from amoa.config import settings
@@ -8,11 +8,11 @@ from amoa.state import MissionState, HelloMessage
 
 
 async def hello_node(state: MissionState) -> dict:
-    """Single node that calls Claude and adds the response to state."""
-    client = AsyncAnthropic(api_key=settings.anthropic_api_key, base_url=settings.anthropic_base_url)
+    """Single node that calls Groq and adds the response to state."""
+    client = AsyncGroq(api_key=settings.groq_api_key)
 
-    response = await client.messages.create(
-        model="claude-sonnet-4-6",
+    response = await client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         max_tokens=128,
         messages=[
             {
@@ -25,7 +25,7 @@ async def hello_node(state: MissionState) -> dict:
             }
         ],
     )
-    text = response.content[0].text
+    text = response.choices[0].message.content
     return {"messages": [HelloMessage(text=text)]}
 
 

@@ -7,7 +7,6 @@ from amoa.graph import build_graph, hello_node
 
 def test_settings_load():
     """Config loads from .env without crashing."""
-    assert settings.anthropic_api_key
     assert settings.google_api_key
     assert settings.groq_api_key
 
