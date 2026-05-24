@@ -1,10 +1,11 @@
 """W0 hello-world LangGraph. Validates the stack end-to-end."""
 import asyncio
+
 from groq import AsyncGroq
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 
 from amoa.config import settings
-from amoa.state import MissionState, HelloMessage
+from amoa.state import HelloMessage, MissionState
 
 
 async def hello_node(state: MissionState) -> dict:
@@ -26,6 +27,8 @@ async def hello_node(state: MissionState) -> dict:
         ],
     )
     text = response.choices[0].message.content
+    if not text:
+        raise ValueError("Groq returned empty content")
     return {"messages": [HelloMessage(text=text)]}
 
 

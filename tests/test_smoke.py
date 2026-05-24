@@ -1,8 +1,9 @@
 """W0 smoke tests. Verify imports, config, state, graph compilation."""
 import pytest
+
 from amoa.config import settings
-from amoa.state import MissionState, HelloMessage
 from amoa.graph import build_graph, hello_node
+from amoa.state import HelloMessage, MissionState
 
 
 def test_settings_load():

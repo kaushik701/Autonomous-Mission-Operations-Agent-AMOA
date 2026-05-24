@@ -3,16 +3,17 @@
 W0: hello-world placeholder.
 W1-W4: agent assessments added incrementally.
 """
-from datetime import datetime
-from typing import Annotated
-from pydantic import BaseModel, Field
 import operator
+from datetime import UTC, datetime
+from typing import Annotated
+
+from pydantic import BaseModel, Field
 
 
 class HelloMessage(BaseModel):
     """W0 placeholder — replaced in W1."""
     text: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class MissionState(BaseModel):
