@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+
+# Data — never commit raw datasets
+data/
+!data/.gitkeep
+
+# Caches
+.diskcache/
+.cache/
+.pytest_cache/
+.ruff_cache/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notebooks
+.ipynb_checkpoints/
+notebooks/*.ipynb
+
+# LangSmith
+.langsmith/
+
+# Eval outputs (results regenerated per run)
+src/amoa/eval/results/*.json
+!src/amoa/eval/results/.gitkeep
+
+# Claude Code sessions
+.claude/sessions/
+.claude/logs/
+!.claude/settings.json
+
+# DO commit failures.jsonl — it's the growing failure-mode log

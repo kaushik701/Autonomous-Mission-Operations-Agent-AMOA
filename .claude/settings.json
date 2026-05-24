@@ -1,0 +1,32 @@
+{
+  "description": "AMOA — Autonomous Mission Operations Agent",
+  "permissions": {
+    "allow": [
+      "Read(*.py)",
+      "Read(*.md)",
+      "Read(*.toml)",
+      "Read(*.json)",
+      "Read(tests/**)",
+      "Edit(src/**)",
+      "Edit(tests/**)",
+      "Edit(docs/**)",
+      "Edit(*.md)",
+      "Bash(uv:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(make:*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Read(.env)",
+      "Edit(.env)"
+    ]
+  }
+}
