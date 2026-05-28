@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     langsmith_tracing: bool = True
 
     # LLM provider
-    amoa_llm_provider: str = "claude"
+    amoa_llm_provider: str = "groq"
 
     # Paths
     project_root: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent)

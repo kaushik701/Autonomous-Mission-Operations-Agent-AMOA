@@ -29,4 +29,10 @@ ADRs in `docs/decisions/`. As of W0:
 
 - Scaffolding completed in [X minutes].
 - Hello-world LangGraph runs end-to-end.
-- [Add any notes from Saturday — what surprised you, what to watch.]
+- W0: update ADR-0002 — Groq from day one, Anthropic unavailable
+
+### Week 1 (May 26)
+
+- Space-Track auth verified; TLE pull working via `gp` class (tle_latest retired).
+- CDM access requires separate Space-Track approval (401 on expandedspacedata/cdm); requested.
+- W1 Safety Pilot proceeds with mocked CDM fixtures until access granted.

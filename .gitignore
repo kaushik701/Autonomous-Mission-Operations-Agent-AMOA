@@ -4,6 +4,8 @@ __pycache__/
 .venv/
 .uv/
 *.egg-info/
+*.pdf
+*.docx
 
 # Environment
 .env
@@ -42,5 +44,14 @@ src/amoa/eval/results/*.json
 .claude/sessions/
 .claude/logs/
 !.claude/settings.json
+
+# markdown files and pdf files
+AMOA_CLAUDE_CODE.md
+AMOA_W0.md
+AMOA_PLAN.md
+IDEAS_PARKING.md
+
+*.pdf
+
 
 # DO commit failures.jsonl — it's the growing failure-mode log
