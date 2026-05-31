@@ -1,0 +1,23 @@
+{
+    "low_risk": {
+        "pc": 1e-7,
+        "miss_distance_m": 5772.9,
+        "tca": "2026-06-06T14:42:34",
+        "sat1_name": "ISS (ZARYA)",
+        "sat2_name": "FENGYUN 1C DEB"
+    },
+    "medium_risk": {
+        "pc": 1e-5,
+        "miss_distance_m": 412.3,
+        "tca": "2026-06-07T09:15:22",
+        "sat1_name": "SENTINEL-2A",
+        "sat2_name": "SL-16 R/B"
+    },
+    "high_risk": {
+        "pc": 1e-3,
+        "miss_distance_m": 87.1,
+        "tca": "2026-06-07T22:03:11",
+        "sat1_name": "STARLINK-1234",
+        "sat2_name": "COSMOS 2251 DEB"
+    }
+}

@@ -50,7 +50,13 @@ def _window_has_anomaly(
         return 0
     ts = window.index
     for _, row in channel_labels.iterrows():
-        if ((ts >= row["StartTime"]) & (ts <= row["EndTime"])).any():
+        start = row["StartTime"]
+        end = row["EndTime"]
+        # Channel pickles are tz-naive; labels CSV is tz-aware UTC. Normalize.
+        if ts.tz is None and start.tzinfo is not None:
+            start = start.tz_localize(None)
+            end = end.tz_localize(None)
+        if ((ts >= start) & (ts <= end)).any():
             return 1
     return 0
 
