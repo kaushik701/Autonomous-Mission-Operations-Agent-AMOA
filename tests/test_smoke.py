@@ -1,8 +1,8 @@
-"""W0 smoke tests. Verify imports, config, state, graph compilation."""
+"""W0/W1 smoke tests. Verify imports, config, state, and graph compilation."""
 import pytest
 
 from amoa.config import settings
-from amoa.graph import build_graph, hello_node
+from amoa.graph import build_graph, safety_pilot_node
 from amoa.state import HelloMessage, MissionState
 
 
@@ -16,6 +16,7 @@ def test_mission_state_default():
     """MissionState constructs with no args."""
     state = MissionState()
     assert state.messages == []
+    assert state.safety_assessment is None
 
 
 def test_hello_message_creates_timestamp():
@@ -30,13 +31,15 @@ def test_graph_compiles():
 
 
 @pytest.mark.asyncio
-async def test_hello_node_returns_message():
-    """Live API call — costs ~$0.001."""
+async def test_safety_pilot_node_returns_assessment():
+    """Live Groq call — verifies Safety Pilot node wired into graph state."""
     state = MissionState()
-    result = await hello_node(state)
-    assert "messages" in result
-    assert len(result["messages"]) == 1
-    assert result["messages"][0].text
+    result = await safety_pilot_node(state)
+    assert "safety_assessment" in result
+    a = result["safety_assessment"]
+    assert a.risk_level is not None
+    assert a.recommended_action is not None
+    assert 0.0 <= a.confidence <= 1.0
 
 
 def test_state_messages_concat():

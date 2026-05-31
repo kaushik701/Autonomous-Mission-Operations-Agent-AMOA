@@ -43,3 +43,5 @@ ADRs in `docs/decisions/`. As of W0:
 - Safety Pilot agent (`src/amoa/agents/safety_pilot.py`) shipped: `SafetyAssessment` schema, `RiskLevel`/`RecommendedAction` StrEnums, `run_safety_pilot()` routes through `structured_completion`.
 - 3 end-to-end CDM scenario tests (LOW / MEDIUM / HIGH risk) green via live Groq calls.
 - Full suite: 12/12 green (smoke + llm negative-path + safety pilot).
+- `graph.py` updated: `hello_node` replaced by `safety_pilot_node`; `MissionState` gains `safety_assessment` field; smoke tests updated to match W1 graph.
+- W1 complete: Safety Pilot wired end-to-end through LangGraph.
