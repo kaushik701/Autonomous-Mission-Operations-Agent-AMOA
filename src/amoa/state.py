@@ -9,6 +9,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from amoa.agents.safety_pilot import SafetyAssessment
+
 
 class HelloMessage(BaseModel):
     """W0 placeholder — replaced in W1."""
@@ -27,3 +29,5 @@ class MissionState(BaseModel):
     - W4: + supervisor_decision, failure_log
     """
     messages: Annotated[list[HelloMessage], operator.add] = Field(default_factory=list)
+    safety_assessment: SafetyAssessment | None = None
+    

@@ -1,42 +1,35 @@
 """W0 hello-world LangGraph. Validates the stack end-to-end."""
 import asyncio
+import json
+from pathlib import Path
 
-from groq import AsyncGroq
+# from groq import AsyncGroq
 from langgraph.graph import END, START, StateGraph
 
-from amoa.config import settings
-from amoa.state import HelloMessage, MissionState
+from amoa.agents.safety_pilot import run_safety_pilot
+
+# from amoa.config import settings
+from amoa.state import MissionState
 
 
-async def hello_node(state: MissionState) -> dict:
-    """Single node that calls Groq and adds the response to state."""
-    client = AsyncGroq(api_key=settings.groq_api_key)
-
-    response = await client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        max_tokens=128,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "You are about to help build AMOA, an autonomous mission "
-                    "operations agent for satellites. In one sentence, what is "
-                    "the hardest part of multi-agent coordination?"
-                ),
-            }
-        ],
+async def safety_pilot_node(state: MissionState) -> dict:
+    """LangGraph node wrapping the Safety Pilot agent."""
+    cdm_path = (
+        Path(__file__).parent.parent.parent
+        / "tests" / "fixtures" / "cdms" / "three_scenarios.json"
     )
-    text = response.choices[0].message.content
-    if not text:
-        raise ValueError("Groq returned empty content")
-    return {"messages": [HelloMessage(text=text)]}
+    scenarios = json.loads(cdm_path.read_text())
+    cdm = scenarios["high_risk"]
+
+    assessment = await run_safety_pilot(cdm)
+    return {"safety_assessment": assessment}
 
 
 def build_graph():
     graph = StateGraph(MissionState)
-    graph.add_node("hello", hello_node)
-    graph.add_edge(START, "hello")
-    graph.add_edge("hello", END)
+    graph.add_node("safety_pilot", safety_pilot_node)
+    graph.add_edge(START, "safety_pilot")
+    graph.add_edge("safety_pilot", END)
     return graph.compile()
 
 
@@ -49,5 +42,9 @@ async def run_demo() -> MissionState:
 
 if __name__ == "__main__":
     state = asyncio.run(run_demo())
-    for msg in state.messages:
-        print(f"[{msg.timestamp.isoformat()}] {msg.text}")
+    a = state.safety_assessment
+    print(f"Risk Level    : {a.risk_level}")
+    print(f"Action        : {a.recommended_action}")
+    print(f"PC            : {a.pc}")
+    print(f"Miss Distance : {a.miss_distance_m} m")
+    print(f"Reasoning     : {a.reasoning}")
