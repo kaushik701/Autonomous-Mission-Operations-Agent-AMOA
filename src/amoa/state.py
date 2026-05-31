@@ -10,6 +10,8 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from amoa.agents.safety_pilot import SafetyAssessment
+from amoa.agents.health_guard import HealthAssessment
+
 
 
 class HelloMessage(BaseModel):
@@ -30,4 +32,5 @@ class MissionState(BaseModel):
     """
     messages: Annotated[list[HelloMessage], operator.add] = Field(default_factory=list)
     safety_assessment: SafetyAssessment | None = None
+    health_assessment: HealthAssessment | None = None
     
