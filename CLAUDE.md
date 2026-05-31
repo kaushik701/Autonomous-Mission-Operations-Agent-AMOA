@@ -56,7 +56,7 @@ Python 3.11+, `uv`, LangGraph, Pydantic v2, `httpx`, `spacetrack`,
 ## Active week
 
 - **Current week:** W1 (May 26) — Safety Pilot foundation
-- **W1 status:** `llm.py` landed + 3 negative tests green; Space-Track TLE live; CDM mocked pending access; Safety Pilot agent still TODO
+- **W1 status:** `llm.py` + Safety Pilot agent shipped; 12/12 tests green; CDM live access pending
 - **Next milestone:** W2 — Health Guard + ESA Anomaly baseline
 
 ## Reference docs
