@@ -11,9 +11,9 @@ __pycache__/
 .env
 .env.local
 
-# Data — never commit raw datasets
-data/
-!data/.gitkeep
+# Data — never commit raw datasets (root-level only; src/amoa/data/ is source code)
+/data/
+!/data/.gitkeep
 
 # Caches
 .diskcache/
