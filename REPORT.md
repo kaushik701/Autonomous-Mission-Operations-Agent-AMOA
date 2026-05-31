@@ -36,3 +36,7 @@ ADRs in `docs/decisions/`. As of W0:
 - Space-Track auth verified; TLE pull working via `gp` class (tle_latest retired).
 - CDM access requires separate Space-Track approval (401 on expandedspacedata/cdm); requested.
 - W1 Safety Pilot proceeds with mocked CDM fixtures until access granted.
+- `src/amoa/llm.py` shipped: `structured_completion()` is the single LLM entry point. Providers wired: Groq (llama-3.3-70b-versatile) and Gemini (gemini-2.5-flash, text + vision). Anthropic deliberately omitted per ADR-0002 (credit expired).
+- Retry-with-correction loop on schema-validation or JSON-parse failure; failures categorized into 5 buckets (`schema_violation`, `refusal`, `timeout`, `rate_limit`, `malformed_json`) and appended to `src/amoa/eval/failures.jsonl`.
+- Bug caught by tests: Pydantic v2 `ValidationError` is a subclass of `ValueError`; `except` clause order in `structured_completion` was wrong — `schema_violation` was silently mis-categorized as `malformed_json`. Fixed.
+- 3 negative-path tests in `tests/test_llm.py` — all green. W1 harness deliverable complete.
