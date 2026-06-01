@@ -2,7 +2,7 @@
 Provider abstraction for all LLM calls in AMOA.
 
 Every agent call goes through structured_completion().
-Agents never import anthropic, groq, or google.generativeai directly.
+Agents never import anthropic, groq, or google.genai directly.
 """
 
 import json
@@ -11,7 +11,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypeVar
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from groq import AsyncGroq
 from pydantic import BaseModel, ValidationError
 
@@ -169,12 +170,15 @@ async def _call_provider(provider: str, system: str, user: str) -> str:
         return response.choices[0].message.content
 
     elif provider in ("gemini", "gemini-vision"):
-        genai.configure(api_key=settings.google_api_key)
-        model = genai.GenerativeModel(
-            model_name=_model_for(provider),
-            system_instruction=system,
+        client = genai.Client(api_key=settings.google_api_key)
+        response = await client.aio.models.generate_content(
+            model=_model_for(provider),
+            contents=user,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=1024,
+            ),
         )
-        response = await model.generate_content_async(user)
         return response.text
 
     else:
