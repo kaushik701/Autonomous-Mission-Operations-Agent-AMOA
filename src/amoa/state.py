@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from amoa.agents.safety_pilot import SafetyAssessment
 from amoa.agents.health_guard import HealthAssessment
-
+from amoa.agents.payload_scientist import PayloadAssessment
 
 
 class HelloMessage(BaseModel):
@@ -33,4 +33,5 @@ class MissionState(BaseModel):
     messages: Annotated[list[HelloMessage], operator.add] = Field(default_factory=list)
     safety_assessment: SafetyAssessment | None = None
     health_assessment: HealthAssessment | None = None
+    payload_assessment: PayloadAssessment | None = None
     
