@@ -5,6 +5,7 @@ Every agent call goes through structured_completion().
 Agents never import anthropic, groq, or google.genai directly.
 """
 
+import base64
 import json
 import logging
 from datetime import UTC, datetime
@@ -73,6 +74,7 @@ async def structured_completion(
     schema: type[T],
     *,
     provider: str | None = None,
+    image_b64: str | None = None,
     max_retries: int = 1,
 ) -> T:
     """
@@ -106,7 +108,7 @@ async def structured_completion(
 
         try:
             raw_output = await _call_provider(
-                resolved_provider, system, user_message
+                resolved_provider, system, user_message, image_b64=image_b64
             )
         except Exception as e:
             category = CATEGORY_RATE_LIMIT if "429" in str(e) else CATEGORY_TIMEOUT
@@ -155,7 +157,9 @@ def _model_for(provider: str) -> str:
     return models[provider]
 
 
-async def _call_provider(provider: str, system: str, user: str) -> str:
+async def _call_provider(
+    provider: str, system: str, user: str, *, image_b64: str | None = None
+) -> str:
     """Route to the correct SDK and return raw string output."""
     if provider == "groq":
         client = AsyncGroq(api_key=settings.groq_api_key)
@@ -169,11 +173,34 @@ async def _call_provider(provider: str, system: str, user: str) -> str:
         )
         return response.choices[0].message.content
 
-    elif provider in ("gemini", "gemini-vision"):
+    elif provider == "gemini":
         client = genai.Client(api_key=settings.google_api_key)
         response = await client.aio.models.generate_content(
             model=_model_for(provider),
             contents=user,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system,
+                max_output_tokens=1024,
+            ),
+        )
+        return response.text
+
+    elif provider == "gemini-vision":
+        if image_b64 is None:
+            raise ValueError("gemini-vision requires image_b64")
+        client = genai.Client(api_key=settings.google_api_key)
+        contents = [
+            genai_types.Part(text=user),
+            genai_types.Part(
+                inline_data=genai_types.Blob(
+                    mime_type="image/jpeg",
+                    data=base64.b64decode(image_b64),
+                )
+            ),
+        ]
+        response = await client.aio.models.generate_content(
+            model=_model_for(provider),
+            contents=contents,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system,
                 max_output_tokens=1024,
