@@ -1,0 +1,39 @@
+# serializer version: 1
+# name: test_health_guard_snapshot
+  dict({
+    'affected_channels': list([
+      'temperature_sensor_1',
+    ]),
+    'anomaly_detected': True,
+    'confidence': 0.88,
+    'reasoning': 'Spike at index 3 is 22 degrees above baseline.',
+    'severity': <AnomalySeverity.WARNING: 'WARNING'>,
+  })
+# ---
+# name: test_payload_scientist_snapshot
+  dict({
+    'cloud_coverage_pct': 15.0,
+    'confidence': 0.85,
+    'features_observed': list([
+      'field patterns',
+      'irrigation channels',
+    ]),
+    'image_quality': <ImageQuality.GOOD: 'GOOD'>,
+    'land_cover': <LandCoverType.AGRICULTURAL: 'AGRICULTURAL'>,
+    'observation_value': 0.78,
+    'reasoning': 'Low cloud cover, clear agricultural patterns visible.',
+  })
+# ---
+# name: test_safety_pilot_snapshot
+  dict({
+    'confidence': 0.92,
+    'miss_distance_m': 412.3,
+    'pc': 1e-05,
+    'reasoning': 'PC of 1e-5 is in the MEDIUM band — monitor closely.',
+    'recommended_action': <RecommendedAction.MONITOR: 'MONITOR'>,
+    'risk_level': <RiskLevel.MEDIUM: 'MEDIUM'>,
+    'sat1_name': 'SENTINEL-2A',
+    'sat2_name': 'SL-16 R/B',
+    'tca': '2026-06-07T09:15:22',
+  })
+# ---
