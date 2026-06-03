@@ -55,10 +55,11 @@ Python 3.11+, `uv`, LangGraph, Pydantic v2, `httpx`, `spacetrack`,
 
 ## Active week
 
-- **Current week:** W3 (June 9) — Payload Scientist
+- **Current week:** W4 (June 16) — Supervisor + Conflict Resolver
 - **W1 status:** COMPLETE — `llm.py`, Safety Pilot agent, graph wired end-to-end; 12/12 tests green; CDM live access pending
 - **W2 status:** COMPLETE — ESA loader, IsolationForest baseline, Health Guard agent (Gemini Flash-Lite), Send fan-out wired, ADR-0003, v0.3.0 tagged
-- **Next milestone:** W3 — Payload Scientist (Gemini 2.5 Flash Vision) + snapshot testing
+- **W3 status:** COMPLETE — Payload Scientist (Gemini Flash Vision), sentinel_loader, three-agent fan-out, syrupy snapshots for all agents, 15/15 tests green, v0.4.0 tagged
+- **Next milestone:** W4 — Supervisor + Conflict Resolver; Anthropic credit expires June 16, flip to Groq Wed June 17
 
 ## Reference docs
 
