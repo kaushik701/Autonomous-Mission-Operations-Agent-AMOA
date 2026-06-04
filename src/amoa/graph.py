@@ -1,71 +1,102 @@
-"""W3 LangGraph — Safety Pilot + Health Guard + Payload Scientist in parallel via Send fan-out."""
+"""
+W4: Full supervisor with Send fan-out to three agents.
+Conflict Resolver receives all assessments + failure_log.
+"""
 import asyncio
 import json
 from pathlib import Path
+from typing import Literal
 
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
 
+from amoa.state import MissionState, FailureEvent
+from amoa.agents.safety_pilot import run_safety_pilot
 from amoa.agents.health_guard import run_health_guard
 from amoa.agents.payload_scientist import run_payload_scientist
-from amoa.agents.safety_pilot import run_safety_pilot
-from amoa.data.esa_loader import load_channel_window
-from amoa.data.sentinel_loader import list_scenes, load_scene
-from amoa.state import MissionState
 
 
-def _load_cdm() -> dict:
-    cdm_path = (
-        Path(__file__).parent.parent.parent
-        / "tests" / "fixtures" / "cdms" / "three_scenarios.json"
-    )
-    return json.loads(cdm_path.read_text())["high_risk"]
+async def safety_pilot_node(state: MissionState) -> dict:
+    cdm_path = Path("tests/fixtures/cdms/three_scenarios.json")
+    cdm = json.loads(cdm_path.read_text())["high_risk"]
+    try:
+        assessment = await run_safety_pilot(cdm)
+        return {"safety_assessment": assessment}
+    except Exception as e:
+        return {"failure_log": [FailureEvent(
+            agent="safety_pilot",
+            category="timeout" if "timeout" in str(e).lower() else "schema_violation",
+            error=str(e),
+            recoverable=True,
+        )]}
 
 
-def _load_scene() -> dict:
-    tci_scenes = [p for p in list_scenes() if "TCI" in p.name and "_1" not in p.name]
-    path = tci_scenes[0] if tci_scenes else list_scenes()[0]
-    return load_scene(path)
-
-
-def _load_telemetry() -> dict:
-    df = load_channel_window(10, start_idx=0, window_size=50)
-    return {
-        "channel_name": "channel_10",
-        "values": df.iloc[:, 0].tolist(),
-        "is_anomaly": 0,
+async def health_guard_node(state: MissionState) -> dict:
+    window = {
+        "channel_name": "temperature_sensor_1",
+        "values": [23.1, 23.4, 45.8, 23.2, 23.3],
+        "is_anomaly": 1,
     }
+    try:
+        assessment = await run_health_guard(window)
+        return {"health_assessment": assessment}
+    except Exception as e:
+        return {"failure_log": [FailureEvent(
+            agent="health_guard",
+            category="rate_limit" if "429" in str(e) else "schema_violation",
+            error=str(e),
+            recoverable=True,
+        )]}
 
 
-def dispatch(state: MissionState) -> list[Send]:
-    """Fan out Safety Pilot and Health Guard in parallel.
+async def payload_scientist_node(state: MissionState) -> dict:
+    from amoa.data.sentinel_loader import load_scene, list_scenes
+    scenes = list_scenes()
+    if not scenes:
+        return {"failure_log": [FailureEvent(
+            agent="payload_scientist",
+            category="timeout",
+            error="No scenes available in data/sentinel/",
+            recoverable=False,
+        )]}
+    try:
+        scene = load_scene(scenes[0])
+        assessment = await run_payload_scientist(scene)
+        return {"payload_assessment": assessment}
+    except Exception as e:
+        return {"failure_log": [FailureEvent(
+            agent="payload_scientist",
+            category="schema_violation",
+            error=str(e),
+            recoverable=True,
+        )]}
 
-    Each Send carries only the payload the destination node needs —
-    not the full MissionState. Mismatch = silent fan-out failure.
-    """
+
+def fan_out(state: MissionState) -> list[Send]:
     return [
-        Send("safety_pilot", {"cdm": _load_cdm()}),
-        Send("health_guard", {"telemetry": _load_telemetry()}),
-        Send("payload_scientist", {"scene": _load_scene()}),
+        Send("safety_pilot", state),
+        Send("health_guard", state),
+        Send("payload_scientist", state),
     ]
 
 
-async def safety_pilot_node(payload: dict) -> dict:
-    """Receives CDM payload from Send fan-out, returns safety_assessment."""
-    assessment = await run_safety_pilot(payload["cdm"])
-    return {"safety_assessment": assessment}
-
-
-async def health_guard_node(payload: dict) -> dict:
-    """Receives telemetry payload from Send fan-out, returns health_assessment."""
-    assessment = await run_health_guard(payload["telemetry"])
-    return {"health_assessment": assessment}
-
-
-async def payload_scientist_node(payload: dict) -> dict:
-    """Receives scene payload from Send fan-out, returns payload_assessment."""
-    assessment = await run_payload_scientist(payload["scene"])
-    return {"payload_assessment": assessment}
+async def conflict_resolver_node(state: MissionState) -> dict:
+    """Placeholder — full resolver built Thursday."""
+    from amoa.state import SupervisorDecision
+    degraded = len(state.failure_log) > 0
+    safety_wins = (
+        state.safety_assessment is not None
+        and state.safety_assessment.risk_level.value == "HIGH"
+    )
+    return {
+        "supervisor_decision": SupervisorDecision(
+            priority_action="MANEUVER" if safety_wins else "NOMINAL_OPS",
+            reasoning="Safety Pilot HIGH risk overrides all other concerns." if safety_wins
+                      else "No critical issues detected.",
+            confidence=0.95 if not degraded else 0.6,
+            degraded_mode=degraded,
+        )
+    }
 
 
 def build_graph():
@@ -73,12 +104,12 @@ def build_graph():
     graph.add_node("safety_pilot", safety_pilot_node)
     graph.add_node("health_guard", health_guard_node)
     graph.add_node("payload_scientist", payload_scientist_node)
-    graph.add_conditional_edges(
-        START, dispatch, ["safety_pilot", "health_guard", "payload_scientist"]
-    )
-    graph.add_edge("safety_pilot", END)
-    graph.add_edge("health_guard", END)
-    graph.add_edge("payload_scientist", END)
+    graph.add_node("conflict_resolver", conflict_resolver_node)
+    graph.add_conditional_edges(START, fan_out, ["safety_pilot", "health_guard", "payload_scientist"])
+    graph.add_edge("safety_pilot", "conflict_resolver")
+    graph.add_edge("health_guard", "conflict_resolver")
+    graph.add_edge("payload_scientist", "conflict_resolver")
+    graph.add_edge("conflict_resolver", END)
     return graph.compile()
 
 
@@ -90,29 +121,9 @@ async def run_demo() -> MissionState:
 
 if __name__ == "__main__":
     state = asyncio.run(run_demo())
-
-    a = state.safety_assessment
-    print("-- Safety Pilot ----------------------")
-    print(f"Risk Level    : {a.risk_level}")
-    print(f"Action        : {a.recommended_action}")
-    print(f"PC            : {a.pc}")
-    print(f"Miss Distance : {a.miss_distance_m} m")
-    print(f"Reasoning     : {a.reasoning}")
-
-    h = state.health_assessment
-    print("\n-- Health Guard ----------------------")
-    print(f"Anomaly       : {h.anomaly_detected}")
-    print(f"Severity      : {h.severity}")
-    print(f"Channels      : {h.affected_channels}")
-    print(f"Confidence    : {h.confidence}")
-    print(f"Reasoning     : {h.reasoning}")
-
-    p = state.payload_assessment
-    print("\n-- Payload Scientist -----------------")
-    print(f"Cloud Cover   : {p.cloud_coverage_pct}%")
-    print(f"Image Quality : {p.image_quality}")
-    print(f"Land Cover    : {p.land_cover}")
-    print(f"Obs Value     : {p.observation_value}")
-    print(f"Confidence    : {p.confidence}")
-    print(f"Features      : {p.features_observed}")
-    print(f"Reasoning     : {p.reasoning}")
+    d = state.supervisor_decision
+    print(f"Decision  : {d.priority_action}")
+    print(f"Reasoning : {d.reasoning}")
+    print(f"Confidence: {d.confidence}")
+    print(f"Degraded  : {d.degraded_mode}")
+    print(f"Failures  : {len(state.failure_log)}")
