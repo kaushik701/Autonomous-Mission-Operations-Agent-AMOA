@@ -54,4 +54,4 @@ IDEAS_PARKING.md
 *.pdf
 
 
-# DO commit failures.jsonl — it's the growing failure-mode log
+src/amoa/eval/failures.jsonl
