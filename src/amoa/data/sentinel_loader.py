@@ -53,5 +53,8 @@ def load_scene(filename: str) -> dict:
 
 
 def list_scenes() -> list[str]:
-    """Return all GeoTIFF filenames in data/sentinel/."""
-    return [f.name for f in sorted(SENTINEL_DIR.glob("*.tif*"))]
+    """Return GeoTIFF filenames in data/sentinel/, TCI files first."""
+    all_files = sorted(SENTINEL_DIR.glob("*.tif*"))
+    tci = [f.name for f in all_files if "TCI" in f.name]
+    other = [f.name for f in all_files if "TCI" not in f.name]
+    return tci + other
