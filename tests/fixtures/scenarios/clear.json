@@ -1,0 +1,30 @@
+{
+  "safety_assessment": {
+    "pc": 1e-8,
+    "miss_distance_m": 12400.0,
+    "tca": "2026-06-10T14:23:00+00:00",
+    "sat1_name": "SENTINEL-2A",
+    "sat2_name": "DEBRIS-44312",
+    "risk_level": "LOW",
+    "recommended_action": "MONITOR",
+    "confidence": 0.97,
+    "reasoning": "Probability of collision well below threshold with large miss distance."
+  },
+  "health_assessment": {
+    "anomaly_detected": false,
+    "severity": "NOMINAL",
+    "affected_channels": [],
+    "confidence": 0.98,
+    "reasoning": "All telemetry channels within expected ranges, no anomalies detected."
+  },
+  "payload_assessment": {
+    "cloud_coverage_pct": 8.5,
+    "image_quality": "GOOD",
+    "land_cover": "AGRICULTURAL",
+    "observation_value": 0.91,
+    "features_observed": ["field_boundaries", "irrigation_patterns", "crop_health_variation"],
+    "confidence": 0.94,
+    "reasoning": "Clear scene with high agricultural detail and excellent scientific value."
+  },
+  "failure_log": []
+}

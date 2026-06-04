@@ -1,0 +1,32 @@
+{
+  "safety_assessment": {
+    "pc": 3.1e-5,
+    "miss_distance_m": 740.0,
+    "tca": "2026-06-10T22:15:00+00:00",
+    "sat1_name": "SENTINEL-2A",
+    "sat2_name": "COSMOS-1408-DEB",
+    "risk_level": "MEDIUM",
+    "recommended_action": "MONITOR",
+    "confidence": 0.81,
+    "reasoning": "PC in medium band; miss distance marginal but below maneuver threshold."
+  },
+  "health_assessment": null,
+  "payload_assessment": {
+    "cloud_coverage_pct": 21.0,
+    "image_quality": "GOOD",
+    "land_cover": "FOREST",
+    "observation_value": 0.78,
+    "features_observed": ["deforestation_edge", "river_system", "burn_scar"],
+    "confidence": 0.89,
+    "reasoning": "Mostly clear scene over forest with high environmental monitoring value."
+  },
+  "failure_log": [
+    {
+      "timestamp": "2026-06-10T08:00:00+00:00",
+      "agent": "health_guard",
+      "error": "Gemini API quota exceeded: 429 Too Many Requests",
+      "category": "rate_limit",
+      "recoverable": true
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "safety_assessment": {
+    "pc": 5.2e-4,
+    "miss_distance_m": 180.0,
+    "tca": "2026-06-10T09:41:00+00:00",
+    "sat1_name": "SENTINEL-2A",
+    "sat2_name": "SL-16-R-B-31749",
+    "risk_level": "HIGH",
+    "recommended_action": "MANEUVER",
+    "confidence": 0.92,
+    "reasoning": "PC exceeds 1e-4 threshold with critically small miss distance requiring immediate maneuver."
+  },
+  "health_assessment": {
+    "anomaly_detected": true,
+    "severity": "WARNING",
+    "affected_channels": ["temperature_sensor_1", "battery_voltage"],
+    "confidence": 0.88,
+    "reasoning": "Temperature spike and voltage drop indicate possible thermal control subsystem fault."
+  },
+  "payload_assessment": {
+    "cloud_coverage_pct": 62.0,
+    "image_quality": "DEGRADED",
+    "land_cover": "MIXED",
+    "observation_value": 0.31,
+    "features_observed": ["partial_coastline", "cloud_shadow"],
+    "confidence": 0.71,
+    "reasoning": "Heavy cloud cover significantly degrades scene quality and scientific value."
+  },
+  "failure_log": []
+}
