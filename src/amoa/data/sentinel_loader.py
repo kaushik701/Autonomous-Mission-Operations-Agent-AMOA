@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-SENTINEL_DIR = Path("data/sentinel")
+SENTINEL_DIR = Path(__file__).parent.parent.parent.parent / "data" / "sentinel"
 TARGET_SIZE = (512, 512)
 
 
