@@ -113,9 +113,9 @@ def build_graph():
     return graph.compile()
 
 
-async def run_demo() -> MissionState:
+async def run_demo(scenario:str="high_risk") -> MissionState:
     g = build_graph()
-    result = await g.ainvoke(MissionState())
+    result = await g.ainvoke(MissionState(), config={"configurable": {"scenario": scenario}})
     return MissionState(**result)
 
 
