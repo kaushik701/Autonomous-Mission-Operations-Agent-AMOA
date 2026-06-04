@@ -1,74 +1,57 @@
 """
-Sentinel-2 GeoTIFF loader — reads, composites to RGB, resizes, base64-encodes for Gemini Vision.
-
-Files expected in data/sentinel/ named S2_{YYYYMMDD}_{BAND}.tiff.
+Sentinel-2 imagery loader.
+Reads GeoTIFF, resizes to model-friendly dimensions, base64-encodes for vision API.
 """
 import base64
-import re
-from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import rasterio
 from PIL import Image
 
 SENTINEL_DIR = Path("data/sentinel")
-_NAME_RE = re.compile(r"S2_(\d{8})_(\w+)\.tiff")
+TARGET_SIZE = (512, 512)
 
 
-def list_scenes(data_dir: Path = SENTINEL_DIR) -> list[Path]:
-    """Return sorted list of S2_*.tiff paths in data_dir."""
-    return sorted(data_dir.glob("S2_*.tiff"))
-
-
-def load_scene(path: Path, max_px: int = 512) -> dict:
+def load_scene(filename: str) -> dict:
     """
-    Read a GeoTIFF, composite to RGB uint8, resize to max_px on longest side.
+    Load one Sentinel-2 scene from data/sentinel/.
 
-    Returns dict with filename, date, band, original dims, resized dims, base64_image.
+    Returns dict with:
+        - filename: str
+        - base64_image: str (for vision API)
+        - width, height: int (original dimensions)
+        - bands: int (number of spectral bands)
     """
-    with rasterio.open(path) as src:
-        original_width = src.width
-        original_height = src.height
-        count = src.count
+    path = SENTINEL_DIR / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Scene not found: {path}")
 
-        if count >= 3:
-            r = src.read(1).astype(np.float32)
-            g = src.read(2).astype(np.float32)
-            b = src.read(3).astype(np.float32)
-            rgb = np.stack([r, g, b], axis=-1)
-        else:
-            band = src.read(1).astype(np.float32)
-            rgb = np.stack([band, band, band], axis=-1)
+    img = Image.open(path)
+    original_size = img.size
+    bands = len(img.getbands())
 
-    vmin, vmax = rgb.min(), rgb.max()
-    if vmax > vmin:
-        rgb = (rgb - vmin) / (vmax - vmin) * 255.0
-    rgb = rgb.clip(0, 255).astype(np.uint8)
+    # Resize for vision API — keep aspect ratio
+    img_resized = img.resize(TARGET_SIZE, Image.LANCZOS)
 
-    img = Image.fromarray(rgb, mode="RGB")
+    # Convert to RGB if needed (Sentinel-2 can be multi-band)
+    if img_resized.mode not in ("RGB", "L"):
+        img_resized = img_resized.convert("RGB")
 
-    scale = min(max_px / img.width, max_px / img.height, 1.0)
-    if scale < 1.0:
-        new_w = max(1, int(img.width * scale))
-        new_h = max(1, int(img.height * scale))
-        img = img.resize((new_w, new_h), Image.LANCZOS)
-
-    buf = BytesIO()
-    img.save(buf, format="JPEG", quality=85)
-    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-    m = _NAME_RE.match(path.name)
-    date = m.group(1) if m else "unknown"
-    band = m.group(2) if m else "unknown"
+    # Base64 encode
+    import io
+    buffer = io.BytesIO()
+    img_resized.save(buffer, format="JPEG", quality=85)
+    b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     return {
-        "filename": path.name,
-        "date": date,
-        "band": band,
-        "original_width": original_width,
-        "original_height": original_height,
-        "resized_width": img.width,
-        "resized_height": img.height,
+        "filename": filename,
         "base64_image": b64,
+        "original_width": original_size[0],
+        "original_height": original_size[1],
+        "bands": bands,
     }
+
+
+def list_scenes() -> list[str]:
+    """Return all GeoTIFF filenames in data/sentinel/."""
+    return [f.name for f in SENTINEL_DIR.glob("*.tif")]
