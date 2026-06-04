@@ -54,4 +54,4 @@ def load_scene(filename: str) -> dict:
 
 def list_scenes() -> list[str]:
     """Return all GeoTIFF filenames in data/sentinel/."""
-    return [f.name for f in SENTINEL_DIR.glob("*.tif")]
+    return [f.name for f in sorted(SENTINEL_DIR.glob("*.tif*"))]
