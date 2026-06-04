@@ -32,10 +32,8 @@ def test_graph_compiles():
 
 @pytest.mark.asyncio
 async def test_safety_pilot_node_returns_assessment():
-    """Live Groq call — verifies Safety Pilot node accepts Send payload shape."""
-    from amoa.graph import _load_cdm
-    payload = {"cdm": _load_cdm()}
-    result = await safety_pilot_node(payload)
+    """Live Groq call — verifies Safety Pilot node runs against fixture CDM."""
+    result = await safety_pilot_node(MissionState())
     assert "safety_assessment" in result
     a = result["safety_assessment"]
     assert a.risk_level is not None
