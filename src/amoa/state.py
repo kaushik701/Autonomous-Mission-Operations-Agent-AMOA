@@ -44,6 +44,7 @@ class MissionState(BaseModel):
     - W3: + payload_assessment
     - W4: + supervisor_decision, failure_log
     """
+    scenario: str = "high_risk"
     messages: Annotated[list[HelloMessage], operator.add] = Field(default_factory=list)
     safety_assessment: SafetyAssessment | None = None
     health_assessment: HealthAssessment | None = None

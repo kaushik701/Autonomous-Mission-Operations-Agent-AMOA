@@ -19,7 +19,7 @@ scenario = st.selectbox(
 
 if st.button("Run Mission Assessment"):
     with st.spinner("Running agents..."):
-        state = asyncio.run(run_demo())
+        state = asyncio.run(run_demo(scenario=scenario))
 
     col1, col2, col3 = st.columns(3)
 

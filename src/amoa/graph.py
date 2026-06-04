@@ -18,7 +18,8 @@ from amoa.agents.payload_scientist import run_payload_scientist
 
 async def safety_pilot_node(state: MissionState) -> dict:
     cdm_path = Path("tests/fixtures/cdms/three_scenarios.json")
-    cdm = json.loads(cdm_path.read_text())["high_risk"]
+    scenarios = json.loads(cdm_path.read_text())
+    cdm = scenarios.get(state.scenario, scenarios["high_risk"])
     try:
         assessment = await run_safety_pilot(cdm)
         return {"safety_assessment": assessment}
@@ -113,9 +114,9 @@ def build_graph():
     return graph.compile()
 
 
-async def run_demo(scenario:str="high_risk") -> MissionState:
+async def run_demo(scenario: str = "high_risk") -> MissionState:
     g = build_graph()
-    result = await g.ainvoke(MissionState(), config={"configurable": {"scenario": scenario}})
+    result = await g.ainvoke(MissionState(scenario=scenario))
     return MissionState(**result)
 
 
