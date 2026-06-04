@@ -13,15 +13,6 @@ TARGET_SIZE = (512, 512)
 
 
 def load_scene(filename: str) -> dict:
-    """
-    Load one Sentinel-2 scene from data/sentinel/.
-
-    Returns dict with:
-        - filename: str
-        - base64_image: str (for vision API)
-        - width, height: int (original dimensions)
-        - bands: int (number of spectral bands)
-    """
     path = SENTINEL_DIR / filename
     if not path.exists():
         raise FileNotFoundError(f"Scene not found: {path}")
@@ -30,17 +21,15 @@ def load_scene(filename: str) -> dict:
     original_size = img.size
     bands = len(img.getbands())
 
-    # Resize for vision API — keep aspect ratio
+    # Resize
     img_resized = img.resize(TARGET_SIZE, Image.LANCZOS)
 
-    # Convert to RGB if needed (Sentinel-2 can be multi-band)
-    if img_resized.mode not in ("RGB", "L"):
-        img_resized = img_resized.convert("RGB")
+    # Always convert to RGB — handles single-band, palette, RGBA
+    img_rgb = img_resized.convert("RGB")
 
-    # Base64 encode
     import io
     buffer = io.BytesIO()
-    img_resized.save(buffer, format="JPEG", quality=85)
+    img_rgb.save(buffer, format="JPEG", quality=85)
     b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     return {
