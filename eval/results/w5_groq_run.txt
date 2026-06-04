@@ -1,0 +1,32 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.12, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\Kaushik\OneDrive\Desktop\ML Projects\Autonomous Mission Operations Agent (AMOA)\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Kaushik\OneDrive\Desktop\ML Projects\Autonomous Mission Operations Agent (AMOA)
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.13.0, langsmith-0.8.5, asyncio-1.3.0, cov-7.1.0, syrupy-5.2.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+tests/test_llm.py::test_malformed_json_logs_failure_and_raises PASSED    [  5%]
+tests/test_llm.py::test_schema_violation_logs_failure_and_raises PASSED  [ 11%]
+tests/test_llm.py::test_rate_limit_logs_failure_and_reraises PASSED      [ 16%]
+tests/test_safety_pilot.py::test_low_risk_cdm PASSED                     [ 22%]
+tests/test_safety_pilot.py::test_medium_risk_cdm PASSED                  [ 27%]
+tests/test_safety_pilot.py::test_high_risk_cdm PASSED                    [ 33%]
+tests/test_scenarios.py::test_scenario[clear-NOMINAL_OPS-False] PASSED   [ 38%]
+tests/test_scenarios.py::test_scenario[conflict-MANEUVER-False] PASSED   [ 44%]
+tests/test_scenarios.py::test_scenario[degraded-NOMINAL_OPS-True] PASSED [ 50%]
+tests/test_smoke.py::test_settings_load PASSED                           [ 55%]
+tests/test_smoke.py::test_mission_state_default PASSED                   [ 61%]
+tests/test_smoke.py::test_hello_message_creates_timestamp PASSED         [ 66%]
+tests/test_smoke.py::test_graph_compiles PASSED                          [ 72%]
+tests/test_smoke.py::test_safety_pilot_node_returns_assessment PASSED    [ 77%]
+tests/test_smoke.py::test_state_messages_concat PASSED                   [ 83%]
+tests/test_snapshots.py::test_safety_pilot_snapshot PASSED               [ 88%]
+tests/test_snapshots.py::test_health_guard_snapshot PASSED               [ 94%]
+tests/test_snapshots.py::test_payload_scientist_snapshot PASSED          [100%]
+
+--------------------------- snapshot report summary ---------------------------
+3 snapshots passed.
+============================= 18 passed in 31.45s =============================

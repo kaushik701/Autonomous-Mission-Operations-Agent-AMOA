@@ -54,6 +54,37 @@ F1=0 by construction; 200 windows are required for meaningful evaluation.
 
 *LLM agent comparison against this baseline: W2.*
 
+### W4 Full Graph — Groq Llama 3.3 + Gemini Flash-Lite + Gemini Flash Vision
+
+18/18 tests passed. Run captured in `eval/results/w5_groq_run.txt`.
+
+| Test suite | Tests | Result |
+|---|---|---|
+| `test_llm.py` | 3 | PASSED |
+| `test_safety_pilot.py` | 3 | PASSED |
+| `test_scenarios.py` | 3 | PASSED |
+| `test_smoke.py` | 5 | PASSED |
+| `test_snapshots.py` | 3 | PASSED |
+
+**Scenario coverage:** Three integration scenarios exercise the full
+LangGraph fan-out → Conflict Resolver pipeline without live LLM calls.
+Agent nodes are patched to inject pre-built `MissionState` from JSON
+fixtures; the resolver's rule engine is exercised end-to-end.
+
+| Scenario | Safety | Health | Expected action | Result |
+|---|---|---|---|---|
+| clear | LOW | NOMINAL | NOMINAL_OPS | PASS |
+| conflict | HIGH | WARNING | MANEUVER | PASS |
+| degraded | MEDIUM | — (rate_limit) | NOMINAL_OPS + degraded | PASS |
+
+**Key finding:** Hard-rule resolver correctly prioritises Safety HIGH over
+Health WARNING (`conflict` scenario) and propagates `degraded_mode=True`
+when Health Guard fails (`degraded` scenario). Confidence drops from 0.95
+to 0.60 in degraded mode — correct signal for downstream human review.
+
+**Runtime:** 31 s total; snapshot and scenario tests account for ~28 s
+(live Groq/Gemini calls in smoke + snapshot suites).
+
 ## 5. Evaluation & Reliability
 
 *Filled in W7. Harness narrative — the medium-harness story across all 8 weeks.*
