@@ -1,5 +1,5 @@
 # AMOA Eval Results
-Generated: 2026-06-04 05:28 UTC
+Generated: 2026-06-04 07:12 UTC
 
 | Scenario | Safety | Health | Action | Confidence | Degraded | Failures |
 |---|---|---|---|---|---|---|
