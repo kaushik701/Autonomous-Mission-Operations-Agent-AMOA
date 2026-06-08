@@ -53,16 +53,19 @@ Python 3.11+, `uv`, LangGraph, Pydantic v2, `httpx`, `spacetrack`,
 - Errors and edge cases get explicit handling, not silent swallowing.
 - If a file is becoming a mess, say so and propose a refactor.
 
-## Active week
+## Current status
 
-- **Current week:** W7 (July 7) — Final Polish + Recording
-- **W1 status:** COMPLETE — `llm.py`, Safety Pilot agent, graph wired end-to-end; 12/12 tests green; CDM live access pending
-- **W2 status:** COMPLETE — ESA loader, IsolationForest baseline, Health Guard agent (Gemini Flash-Lite), Send fan-out wired, ADR-0003, v0.3.0 tagged
-- **W3 status:** COMPLETE — Payload Scientist (Gemini Flash Vision), sentinel_loader, three-agent fan-out, syrupy snapshots for all agents, 15/15 tests green, v0.4.0 tagged
-- **W4 status:** COMPLETE — MissionState schema, supervisor Send fan-out, conflict resolver (hybrid rule+LLM), structured failure logging, ADR-0007, v0.5.0 tagged
-- **W5 status:** COMPLETE — Streamlit UI (four panels, scenario dropdown), unified `make eval` harness, Groq provider eval run, RESULTS.md, v0.6.0 tagged
-- **W6 status:** COMPLETE — Space-Track MCP facade, ADR-0007 (MCP design); v1.0.0-rc1 not yet tagged
-- **Next milestone:** W7 — REPORT.md finalization, 3-min demo recording, résumé bullet, flip repos public, v1.0.0
+**Completed:**
+- `llm.py` provider abstraction (Groq/Gemini), retry-with-correction, failure logging
+- Safety Pilot, Health Guard, Payload Scientist agents — all wired into LangGraph fan-out
+- IsolationForest baseline + paired bootstrap CI comparison
+- Supervisor + conflict resolver (hybrid rule+LLM), structured failure logging
+- Streamlit UI (four panels, scenario dropdown)
+- Unified `make eval` harness → `RESULTS.md`
+- Space-Track MCP facade
+- ADRs 0001–0007, v1.0.0-rc1 tagged
+
+**Next:** REPORT.md finalization, 3-min demo recording, résumé bullet, flip repos public, v1.0.0
 
 ## Reference docs
 
