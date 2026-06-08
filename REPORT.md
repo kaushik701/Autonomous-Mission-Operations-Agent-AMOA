@@ -2,7 +2,113 @@
 
 ## 1. Architecture
 
-*Filled in W4–W6. See `docs/architecture.md` for current state.*
+### System Overview
+
+AMOA is a multi-agent LLM system that coordinates three concerns of satellite
+mission operations — collision avoidance, hardware health monitoring, and
+payload imagery analysis — under a LangGraph supervisor with a hybrid
+rule+LLM conflict resolver. It runs locally against real public data (NASA
+Space-Track TLEs and CDMs, ESA Anomaly Dataset Mission 1, Sentinel-2 GeoTIFFs)
+and produces a single `SupervisorDecision` per mission tick.
+
+### The Three Agents
+
+**Safety Pilot** (`agents/safety_pilot.py`) — receives a Conjunction Data
+Message (CDM) from Space-Track via the MCP facade, evaluates collision
+probability and time-to-closest-approach, and returns a `SafetyAssessment`
+with a `RiskLevel` (LOW / MEDIUM / HIGH) and `RecommendedAction`. Runs on
+Groq Llama 3.3 70B (text-only).
+
+**Health Guard** (`agents/health_guard.py`) — receives a batch of ESA
+telemetry windows (1 000 rows each, ~25 min at 90 s cadence) and outputs a
+`HealthAssessment` with `AnomalySeverity` (NOMINAL / WATCH / WARNING /
+CRITICAL) and a plain-language diagnosis. Runs on Gemini 2.5 Flash-Lite.
+Evaluated against an IsolationForest baseline (scikit-learn) using paired
+bootstrap CIs on window-level F1.
+
+**Payload Scientist** (`agents/payload_scientist.py`) — receives a Sentinel-2
+GeoTIFF resized and base64-encoded by `sentinel_loader.py`, and returns a
+`PayloadAssessment` with an `observation_value` (0–1 float) and scene
+description. Runs on Gemini 2.5 Flash (vision modality).
+
+### Supervisor and Conflict Resolver
+
+The LangGraph supervisor dispatches all three agents in parallel using
+`Send` fan-out. Each agent node accepts a payload dict (not the full
+`MissionState`) — a LangGraph constraint that prevents accidental state
+mutations mid-fan-out. Outputs accumulate into `MissionState` via
+`Annotated[list, operator.add]` reducers.
+
+The Conflict Resolver (`agents/supervisor.py`) applies a strict rule
+hierarchy before falling back to an LLM call:
+
+1. **Safety HIGH** → `MANEUVER`, confidence 1.0, no exceptions.
+2. **Health CRITICAL** → `SAFE_MODE`, confidence 1.0.
+3. **Both safety and health in failure_log** → `GROUND_CONTACT`, confidence 1.0.
+4. **Ambiguous** → Groq Llama 3.3 reasons over all three assessments and the
+   failure log, returning a `SupervisorDecision` with action, reasoning,
+   confidence, and `degraded_mode` flag.
+
+Hard rules fire before the LLM is ever called, keeping latency and cost low
+for the common safety-critical cases.
+
+### System Diagram
+
+```mermaid
+flowchart TD
+    UI[Streamlit UI] --> SUP[LangGraph Supervisor\nSend fan-out]
+    SUP --> SP[Safety Pilot\nGroq Llama 3.3]
+    SUP --> HG[Health Guard\nGemini Flash-Lite]
+    SUP --> PS[Payload Scientist\nGemini Flash Vision]
+    SP -->|SafetyAssessment| CR[Conflict Resolver]
+    HG -->|HealthAssessment| CR
+    PS -->|PayloadAssessment| CR
+    CR -->|SupervisorDecision| MS[(MissionState)]
+
+    STC[(Space-Track\nTLEs + CDMs)] --> SP
+    ESA[(ESA Anomaly\nDataset)] --> HG
+    SEN[(Sentinel-2\nGeoTIFFs)] --> PS
+```
+
+### MissionState Schema
+
+`MissionState` is a Pydantic v2 model shared across the entire graph:
+
+| Field | Type | Description |
+|---|---|---|
+| `scenario` | `str` | Active scenario key (`high_risk`, `conflict`, `degraded`) |
+| `messages` | `list[HelloMessage]` | Hello-world carry-over; append-only via reducer |
+| `safety_assessment` | `SafetyAssessment \| None` | Safety Pilot output |
+| `health_assessment` | `HealthAssessment \| None` | Health Guard output |
+| `payload_assessment` | `PayloadAssessment \| None` | Payload Scientist output |
+| `supervisor_decision` | `SupervisorDecision \| None` | Conflict Resolver final action |
+| `failure_log` | `list[FailureEvent]` | Structured failure records; append-only via reducer |
+
+`FailureEvent` captures timestamp, agent name, error string, failure category
+(`schema_violation` / `timeout` / `rate_limit` / `refusal` / `malformed_json`),
+and a `recoverable` flag. The Conflict Resolver reads `failure_log` to detect
+degraded-mode conditions.
+
+### Provider Routing
+
+All LLM calls go through `llm.py:structured_completion()`. Agents never
+import `groq` or `google.genai` directly. The function signature is:
+
+```python
+async def structured_completion(
+    system: str, user: str, schema: type[T],
+    *, provider: str | None = None, image_b64: str | None = None,
+    max_retries: int = 1,
+) -> T
+```
+
+Provider is resolved from the `provider` argument or the `AMOA_LLM_PROVIDER`
+env var. Three providers are wired: `groq` (Llama 3.3 70B), `gemini` (Flash
+text), and `gemini-vision` (Flash multimodal). On a schema-validation or
+JSON-parse failure, `structured_completion` retries once with the error
+appended to the user message, then logs the failure and raises. This
+retry-with-correction loop is the primary reliability mechanism for all
+three agents.
 
 ## 2. Key Decisions
 
