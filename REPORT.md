@@ -110,86 +110,102 @@ appended to the user message, then logs the failure and raises. This
 retry-with-correction loop is the primary reliability mechanism for all
 three agents.
 
-## 2. Key Decisions
+## 2. Methodology
 
-ADRs in `docs/decisions/`. As of W0:
+### CDM Fixtures — Safety Pilot
 
-- ADR-0001: Core stack choices
-- ADR-0002: LLM provider strategy under credit constraint
-- ADR-0003: Data layer — windowed ESA loading, diskcache, IsolationForest baseline
+Space-Track requires a separate CDM-tier approval that was pending throughout
+development. Rather than block Safety Pilot on access, three JSON fixtures were
+constructed from public CDM schema documentation, each representing a distinct
+operational scenario: LOW risk (TCA > 7 days, P_c < 1e-5), MEDIUM risk
+(TCA 2–7 days, P_c ~1e-4), and HIGH risk (TCA < 2 days, P_c > 1e-3). These
+cover the three branches of `RecommendedAction` and ensure the agent's
+schema validation and rule application are exercised without depending on
+live API access. The fixture approach also makes tests deterministic —
+live CDM pulls carry non-reproducible orbital geometries.
 
-## 3. Evaluation Methodology
+### ESA Telemetry — Health Guard
 
-Health Guard is evaluated against the ESA Anomaly Benchmark Dataset (Mission 1).
-The dataset contains 5.27 M timestamped telemetry rows per channel spanning
-2000–2013, with ground-truth anomaly intervals in a separate `labels.csv`.
+Health Guard uses the ESA Anomaly Benchmark Dataset, Mission 1 only (subset
+~500 MB). The full dataset is 12 GB; loading it entirely would exceed the
+6 GB RAM constraint. `esa_loader.py` loads one channel at a time using a
+time-windowed slice, joins anomaly labels from a separate `labels.csv`, and
+normalises timezone representations (channel pickles are tz-naive; labels are
+UTC-aware — mismatch silently drops all labels without the normalisation step).
 
-**Windowing:** channels are sliced into non-overlapping windows of 1 000 rows
-(~25 min of telemetry at 90 s cadence). A window is labeled anomalous if any
-timestamp falls within a labeled interval. Channels 10 and 11 carry no labels
-in the benchmark; evaluation uses channels 14 (96 labeled intervals) and
-15 (52 labeled intervals).
+Channels are sliced into non-overlapping windows of 1 000 rows (~25 min at
+90 s cadence). A window is labeled anomalous if any timestamp falls within a
+ground-truth interval. Channels 10 and 11 carry no labels; evaluation uses
+channels 14 (96 labeled intervals) and 15 (52 labeled intervals). The first
+~20 windows of both channels fall outside any anomaly interval — running fewer
+than 40 windows yields a degenerate all-zeros label vector; 200 windows are
+required for meaningful evaluation.
 
-**Metrics:** precision, recall, and F1 at the window level (binary, positive =
-anomaly). `zero_division=0` applied — windows outside anomaly periods are
-correctly treated as nominal, not as evaluation failures.
+### Sentinel-2 Scenes — Payload Scientist
 
-**Baseline:** `IsolationForest` (scikit-learn, `contamination=0.1`,
-`random_state=42`) trained and evaluated on 200 windows per channel. This
-establishes the floor that Health Guard must beat to justify LLM cost.
+Eight scenes were manually curated from the Copernicus Browser covering a
+range of surface types (agricultural, coastal, urban). GeoTIFF files are
+read with Pillow (PIL), converted to RGB, resized to 512×512, and base64-
+encoded by `sentinel_loader.py`. The 512×512 target keeps the encoded payload
+under Gemini's inline-data limit while preserving enough spatial detail for
+land-cover classification. Palette-mode and single-band images are converted
+to RGB before encoding to avoid Gemini rejection.
 
-## 4. Results
+### Eval Harness
 
-### W1 Baseline — IsolationForest on ESA Mission 1
+`make eval` invokes `src/amoa/eval/harness.py`, which: (1) runs the full
+pytest suite via subprocess and captures exit code and stdout; (2) loads
+`baseline_metrics.json` produced by `baselines/isolation_forest.py`; and (3)
+writes a `RESULTS.md` to `src/amoa/eval/results/`. The harness is invokable
+without a live LLM session — fixture-based scenario tests and snapshot tests
+cover the resolver and all three agents. Statistical comparison uses
+`scipy.stats.bootstrap` (paired, 9 999 resamples) on window-level F1
+differences between Health Guard and IsolationForest.
+
+## 3. Results
+
+### IsolationForest Baseline — ESA Mission 1
 
 | Channel | Windows | Precision | Recall | F1    |
 |---------|---------|-----------|--------|-------|
 | 14      | 200     | 0.050     | 0.250  | 0.083 |
 | 15      | 200     | 0.200     | 0.308  | 0.242 |
 
-**Finding:** IsolationForest achieves low-to-moderate recall at poor precision.
-Channel 14 F1=0.08 indicates the model fires on many non-anomalous windows
-(high false-positive rate under the 0.1 contamination assumption). Channel 15
-is more tractable (F1=0.24). Both scores set the baseline floor Health Guard
-must exceed in W2 evaluation.
+Channel 14 F1=0.083: IsolationForest fires on many non-anomalous windows
+under `contamination=0.1` (high false-positive rate). Channel 15 is more
+tractable (F1=0.242). Both set the floor Health Guard must beat to justify LLM
+inference cost. The bootstrap CI infrastructure is implemented in
+`eval/metrics.py`; a full paired comparison run against Health Guard is
+deferred to future work (Gemini free-tier RPM caps make batch ESA evaluation
+expensive without caching).
 
-**Implementation note:** first 20 windows (20 000 rows) of both channels
-contained zero anomaly labels — anomalies begin at row ~38 000 (channel 14).
-Running fewer than 40 windows produces a degenerate all-zeros label vector and
-F1=0 by construction; 200 windows are required for meaningful evaluation.
+### Scenario Outcomes — Full Graph
 
-*LLM agent comparison against this baseline: W2.*
+Three integration scenarios exercise the LangGraph fan-out → Conflict Resolver
+pipeline end-to-end. Agent nodes are patched with pre-built `MissionState`
+fixtures; the resolver's hard-rule engine fires without live LLM calls.
 
-### W4 Full Graph — Groq Llama 3.3 + Gemini Flash-Lite + Gemini Flash Vision
+| Scenario | Safety risk | Health severity | Resolver decision | Confidence | Degraded |
+|---|---|---|---|---|---|
+| clear | LOW | NOMINAL | NOMINAL_OPS | 0.95 | No |
+| conflict | HIGH | WARNING | MANEUVER | 1.00 | No |
+| degraded | MEDIUM | — (rate_limit) | NOMINAL_OPS | 0.60 | Yes |
 
-18/18 tests passed. Run captured in `eval/results/w5_groq_run.txt`.
+Hard rule 1 fires in `conflict`: Safety HIGH unconditionally returns `MANEUVER`
+before the LLM is called. In `degraded`, Health Guard's failure is recorded in
+`failure_log`; the resolver falls through to the LLM path, which correctly
+lowers confidence and sets `degraded_mode=True` as a signal for human review.
 
-| Test suite | Tests | Result |
-|---|---|---|
-| `test_llm.py` | 3 | PASSED |
-| `test_safety_pilot.py` | 3 | PASSED |
-| `test_scenarios.py` | 3 | PASSED |
-| `test_smoke.py` | 5 | PASSED |
-| `test_snapshots.py` | 3 | PASSED |
+### Provider Comparison
 
-**Scenario coverage:** Three integration scenarios exercise the full
-LangGraph fan-out → Conflict Resolver pipeline without live LLM calls.
-Agent nodes are patched to inject pre-built `MissionState` from JSON
-fixtures; the resolver's rule engine is exercised end-to-end.
-
-| Scenario | Safety | Health | Expected action | Result |
-|---|---|---|---|---|
-| clear | LOW | NOMINAL | NOMINAL_OPS | PASS |
-| conflict | HIGH | WARNING | MANEUVER | PASS |
-| degraded | MEDIUM | — (rate_limit) | NOMINAL_OPS + degraded | PASS |
-
-**Key finding:** Hard-rule resolver correctly prioritises Safety HIGH over
-Health WARNING (`conflict` scenario) and propagates `degraded_mode=True`
-when Health Guard fails (`degraded` scenario). Confidence drops from 0.95
-to 0.60 in degraded mode — correct signal for downstream human review.
-
-**Runtime:** 31 s total; snapshot and scenario tests account for ~28 s
-(live Groq/Gemini calls in smoke + snapshot suites).
+All eval runs use Groq Llama 3.3 70B (Safety Pilot, Conflict Resolver) and
+Gemini 2.5 Flash-Lite / Flash Vision (Health Guard, Payload Scientist).
+A Claude Sonnet comparison was planned but not executed — Anthropic API
+access was constrained to a $40 credit that expired before the eval harness
+reached its final form. Groq's free tier provided sufficient throughput for
+all fixture and snapshot tests (31 s total runtime; 18/18 tests passed). The
+`llm.py` provider abstraction keeps a Claude comparison a one-env-var change
+if access is restored.
 
 ## 5. Evaluation & Reliability
 
