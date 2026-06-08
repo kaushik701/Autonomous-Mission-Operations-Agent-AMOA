@@ -207,9 +207,73 @@ all fixture and snapshot tests (31 s total runtime; 18/18 tests passed). The
 `llm.py` provider abstraction keeps a Claude comparison a one-env-var change
 if access is restored.
 
-## 5. Evaluation & Reliability
+## 4. Evaluation & Reliability
 
-*Filled in W7. Harness narrative — the medium-harness story across all 8 weeks.*
+AMOA was built with a "medium harness" discipline: every feature increment
+added a small, compounding reliability deliverable. The goal was not CI
+automation but a progressively stronger net for catching the failure modes
+that matter most in LLM systems.
+
+**Retry-with-correction + failure taxonomy.** The first harness deliverable
+was `structured_completion()` in `llm.py`. On a `ValidationError` or
+`JSONDecodeError`, the function appends the exact error to the user message
+and retries once — giving the model a chance to self-correct before failing.
+Every failure is categorised into one of five buckets (`schema_violation`,
+`refusal`, `timeout`, `rate_limit`, `malformed_json`) and appended to
+`eval/failures.jsonl`. Failure categorisation matters for triage: a
+`rate_limit` failure is a quota problem; a `schema_violation` is a prompt
+problem. Three negative-path unit tests verify that malformed LLM outputs
+route to the correct bucket — catching the Pydantic v2 `ValidationError`-is-
+a-subclass-of-`ValueError` ordering bug before it reached production.
+
+**Paired bootstrap CI on F1 difference.** Health Guard is not useful if it
+just replicates IsolationForest at higher cost. `eval/metrics.py` implements
+a paired bootstrap (9 999 resamples, `scipy.stats.bootstrap`) on window-level
+F1 differences between the two methods. The CI answers the question "is the
+difference real or noise?" rather than just reporting point estimates. This
+catches the failure mode where an LLM agent looks better on aggregate metrics
+but the margin is within sampling variance.
+
+**Snapshot testing with syrupy.** Prompt changes are the most common source
+of silent regressions in LLM systems — output structure degrades without any
+Python exception. `syrupy` snapshot tests lock the expected output shape for
+each agent on canonical fixture inputs. A prompt change that alters field
+names, drops optional fields, or changes enum values will fail the snapshot
+test. The failure is not automatic rejection — it's a diff to review: if
+intentional, update the snapshot; if not, revert the prompt. Applied to all
+three agents with a single canonical CDM, telemetry window, and Sentinel-2
+scene as fixture inputs.
+
+**Structured failure logging into MissionState.** Agent failures during a
+live graph run are not silent exceptions — they are `FailureEvent` records
+appended to `MissionState.failure_log` via an `operator.add` reducer. The
+Conflict Resolver reads `failure_log` to detect degraded-mode conditions and
+adjust confidence accordingly. This catches the failure mode where an agent
+times out mid-run and the resolver makes a high-confidence decision on
+incomplete data. Visible in LangSmith traces as a structured field on state.
+
+**Unified `make eval` harness.** A single `make eval` invocation runs the
+full pytest suite, loads baseline metrics, and writes `RESULTS.md`. This
+makes the harness invokable without a live LLM session and produces a
+committed artifact in git — progress is visible in history, not just in a
+local terminal session.
+
+**MCP-specific eval suite.** The Space-Track MCP facade is exercised by
+verifying that `fetch_tle_via_mcp` and `fetch_cdms_via_mcp` return
+schema-valid outputs and that the facade's interface matches what a real
+`mcp.ClientSession` transport would expose. This catches interface drift
+before the transport is swapped.
+
+**What medium harness gives up — and why.** Three things were deliberately
+excluded: automatic CI gating (failing a build on eval regression requires
+threshold tuning that takes a week and doesn't fit a 10.5 hr/week budget),
+cost/latency budget enforcement (no production SLA to enforce against), and
+LLM-generated fixture pipelines (a good idea but 1+ week of work on its own).
+These are real harness techniques worth discussing in interviews — the
+trade-off is depth-vs-time, not ignorance of the pattern. What would be added
+next: GitHub Actions running `make eval` on every PR with a baseline
+comparison table posted as a PR comment, and a latency budget per agent
+enforced by a pytest fixture timeout.
 
 ## 6. Reflection
 
