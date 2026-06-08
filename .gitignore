@@ -10,6 +10,7 @@ __pycache__/
 # Environment
 .env
 .env.local
+.env.example
 
 # Data — never commit raw datasets (root-level only; src/amoa/data/ is source code)
 /data/
