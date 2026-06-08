@@ -55,11 +55,14 @@ Python 3.11+, `uv`, LangGraph, Pydantic v2, `httpx`, `spacetrack`,
 
 ## Active week
 
-- **Current week:** W4 (June 16) — Supervisor + Conflict Resolver
+- **Current week:** W7 (July 7) — Final Polish + Recording
 - **W1 status:** COMPLETE — `llm.py`, Safety Pilot agent, graph wired end-to-end; 12/12 tests green; CDM live access pending
 - **W2 status:** COMPLETE — ESA loader, IsolationForest baseline, Health Guard agent (Gemini Flash-Lite), Send fan-out wired, ADR-0003, v0.3.0 tagged
 - **W3 status:** COMPLETE — Payload Scientist (Gemini Flash Vision), sentinel_loader, three-agent fan-out, syrupy snapshots for all agents, 15/15 tests green, v0.4.0 tagged
-- **Next milestone:** W4 — Supervisor + Conflict Resolver; Anthropic credit expires June 16, flip to Groq Wed June 17
+- **W4 status:** COMPLETE — MissionState schema, supervisor Send fan-out, conflict resolver (hybrid rule+LLM), structured failure logging, ADR-0007, v0.5.0 tagged
+- **W5 status:** COMPLETE — Streamlit UI (four panels, scenario dropdown), unified `make eval` harness, Groq provider eval run, RESULTS.md, v0.6.0 tagged
+- **W6 status:** COMPLETE — Space-Track MCP facade, ADR-0007 (MCP design); v1.0.0-rc1 not yet tagged
+- **Next milestone:** W7 — REPORT.md finalization, 3-min demo recording, résumé bullet, flip repos public, v1.0.0
 
 ## Reference docs
 
@@ -80,8 +83,7 @@ Python 3.11+, `uv`, LangGraph, Pydantic v2, `httpx`, `spacetrack`,
 - 6 GB RAM means closing VS Code/Antigravity when running Streamlit + agents
   full-tilt. Watch the page file.
 - All LLM calls through `llm.py`. Direct SDK imports in agent files = bug.
-- Anthropic credit expires June 16. Plan to flip `AMOA_LLM_PROVIDER=groq`
-  in `.env` on Wed June 17. See ADR-0002.
+- Anthropic credit expired June 16; provider flipped to Groq. See ADR-0002.
 - Snapshot tests (`syrupy`) lock expected behavior. If a test fails after a
   prompt change, that's the signal — review the diff, decide intentional or
   regression, update snapshot only if intentional.
