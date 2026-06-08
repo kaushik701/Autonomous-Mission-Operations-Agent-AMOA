@@ -48,7 +48,7 @@ def write_results_md(pytest_result: dict, baseline: dict) -> None:
             f"- Windows: {baseline.get('n_windows', 'N/A')}",
         ]
     else:
-        lines.append("- No baseline metrics found — run W2 IsolationForest first")
+        lines.append("- No baseline metrics found — run IsolationForest baseline first")
 
     RESULTS_MD.write_text("\n".join(lines))
     print(f"Results written to {RESULTS_MD}")

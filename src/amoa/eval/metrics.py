@@ -1,6 +1,6 @@
 """
 Statistical comparison utilities.
-W2 harness deliverable: paired bootstrap CI on F1 difference.
+Paired bootstrap CI on F1 difference (Health Guard vs IsolationForest baseline).
 """
 import numpy as np
 from scipy import stats

@@ -1,6 +1,6 @@
 """
 Direct spacetrack-lib implementation — used by spacetrack_client.py as the
-fallback while the live MCP server is not yet wired (W6 upgrade path).
+transport behind the MCP facade.
 
 Nothing outside spacetrack_client.py should import from here.
 """

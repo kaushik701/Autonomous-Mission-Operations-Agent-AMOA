@@ -1,5 +1,5 @@
 """
-W4: Full supervisor with Send fan-out to three agents.
+Full supervisor with Send fan-out to three agents.
 Conflict Resolver receives all assessments + failure_log.
 """
 import asyncio

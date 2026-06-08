@@ -1,8 +1,4 @@
-"""Shared LangGraph state schema. Grows weekly.
-
-W0: hello-world placeholder.
-W1-W4: agent assessments added incrementally.
-"""
+"""Shared LangGraph state schema."""
 import operator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -29,21 +25,12 @@ class SupervisorDecision(BaseModel):
     degraded_mode: bool = False
 
 class HelloMessage(BaseModel):
-    """W0 placeholder — replaced in W1."""
     text: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class MissionState(BaseModel):
-    """Top-level state shared across agents.
-
-    Field growth schedule:
-    - W0: messages only
-    - W1: + safety_assessment
-    - W2: + health_assessment
-    - W3: + payload_assessment
-    - W4: + supervisor_decision, failure_log
-    """
+    """Top-level state shared across all agents."""
     scenario: str = "high_risk"
     messages: Annotated[list[HelloMessage], operator.add] = Field(default_factory=list)
     safety_assessment: SafetyAssessment | None = None
