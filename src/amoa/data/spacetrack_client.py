@@ -1,61 +1,36 @@
 """
-Space-Track API client with diskcache.
+Space-Track client — W6 MCP facade.
 
-All queries are cached to .diskcache/ by default.
-Rate limits: 30 req/min, 300 req/hr — the spacetrack lib handles throttling.
-Never bypass the throttle.
+Agents call fetch_tle_via_mcp / fetch_cdms_via_mcp.  Today those delegate
+to the direct spacetrack-lib implementation in spacetrack_client_direct.py.
+In W6, replace the body of each function with an mcp.ClientSession tool call:
+
+    async with mcp.ClientSession(...) as session:
+        result = await session.call_tool("tle_lookup", {"norad_id": norad_id})
+        return result.content[0].text
+
+The interface stays identical; only the transport changes.
 """
-import json
-
-import diskcache
-import httpx
-from spacetrack import SpaceTrackClient
-
-from amoa.config import settings
-from amoa.data.cdm import CDM, mock_cdm_factory
-
-cache = diskcache.Cache(settings.diskcache_dir)
+from amoa.data.cdm import CDM
+from amoa.data.spacetrack_client_direct import fetch_tle as _fetch_tle
+from amoa.data.spacetrack_client_direct import fetch_cdms as _fetch_cdms
 
 
-def get_client() -> SpaceTrackClient:
-    return SpaceTrackClient(
-        identity=settings.spacetrack_username,
-        password=settings.spacetrack_password,
-    )
+def fetch_tle_via_mcp(norad_id: int) -> str:
+    """Return latest TLE string for norad_id.
 
-
-def fetch_tle(norad_id: int) -> str:
-    """Fetch latest TLE for a NORAD ID. Cached 1 hour. Uses gp class (tle_latest retired)."""
-    key = f"tle:{norad_id}"
-    if key in cache:
-        return cache[key]
-    client = get_client()
-    result = client.gp(norad_cat_id=norad_id, orderby="epoch desc", limit=1, format="tle")
-    cache.set(key, result, expire=3600)
-    return result
-
-
-def fetch_cdms(limit: int = 10) -> tuple[list[CDM], bool]:
-    """Fetch CDMs from Space-Track. Returns (records, is_mock).
-
-    Falls back to mock_cdm_factory when account lacks CDM access tier (401).
-    Remove fallback once Space-Track CDM access is approved.
+    W6 upgrade: replace body with mcp ClientSession.call_tool("tle_lookup", ...).
     """
-    key = f"cdm:limit:{limit}"
-    if key in cache:
-        cached = cache[key]
-        return cached["records"], cached["is_mock"]
-    client = get_client()
-    try:
-        raw = client.cdm(limit=limit, format="json")
-        data = json.loads(raw) if isinstance(raw, str) else raw
-        records = [CDM(**row) for row in (data if isinstance(data, list) else [data])]
-        is_mock = False
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 401:
-            records = mock_cdm_factory(n=limit, seed=42)
-            is_mock = True
-        else:
-            raise
-    cache.set(key, {"records": records, "is_mock": is_mock}, expire=1800)
-    return records, is_mock
+    # In production: mcp.ClientSession call to spacetrack-mcp server
+    # For now: direct lib call — same interface, no behavioral change
+    return _fetch_tle(norad_id)
+
+
+def fetch_cdms_via_mcp(limit: int = 10) -> tuple[list[CDM], bool]:
+    """Return (cdm_records, is_mock) for the most recent conjunctions.
+
+    W6 upgrade: replace body with mcp ClientSession.call_tool("cdm_fetch", ...).
+    """
+    # In production: mcp.ClientSession call to spacetrack-mcp server
+    # For now: direct lib call — same interface, no behavioral change
+    return _fetch_cdms(limit)
